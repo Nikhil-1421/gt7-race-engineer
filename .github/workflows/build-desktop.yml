@@ -2,12 +2,10 @@
 # so each OS builds its own binary. Trigger: push a tag like v2.1.0, or run
 # manually from the Actions tab (workflow_dispatch) to get artifacts.
 name: build-desktop
-
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-
 jobs:
   build:
     strategy:
@@ -16,23 +14,22 @@ jobs:
         include:
           - os: macos-latest
             artifact: GT7RaceEngineer-macOS.zip
-            build: |
-              bash packaging/build_macos.sh
           - os: windows-latest
             artifact: GT7RaceEngineer-Windows.zip
-            build: |
-              packaging\build_windows.bat
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Build
-        shell: ${{ matrix.shell }}
-        run: ${{ matrix.build }}
-
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash packaging/build_macos.sh
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: packaging\build_windows.bat
       - name: Smoke test (headless boot + health check)
         shell: bash
         env:
@@ -50,12 +47,10 @@ jobs:
           done
           kill $APP_PID || true
           [ "${ok:-0}" = "1" ]
-
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.artifact }}
-
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
