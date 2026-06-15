@@ -273,6 +273,8 @@
     <div class="setuphint" style="margin:-6px 0 10px">Saves your last completed lap as this track's reference — used for the time-trial delta and the Get Faster map. Pick the track above first.</div>
     <button class="engbtn" id="saveRefBtn">⭐ Save last lap as reference</button>
     <div id="saveRefStatus" class="muted" style="margin-top:6px"></div>
+    <button class="engbtn" id="replayToggle" style="margin-top:10px">🎬 Record from replay: off</button>
+    <div class="setuphint" style="margin:6px 0 0">GT7 replays don't count as "in race", so laps normally won't record from one. Turn this on, let the replay play <b>past</b> the lap's start/finish line so the lap finalises, then hit Save above.</div>
     <h2 style="margin-top:18px">Dashboard cards</h2>
     <div class="setuphint" style="margin:-6px 0 10px">Tap to show or hide cards on the dashboard.</div>
     <div class="chips" id="layoutChips"></div>
@@ -401,6 +403,12 @@ $("saveRefBtn").onclick=async()=>{
       : (r.error||"Could not save \u2014 complete a lap first");
   }catch(e){ $("saveRefStatus").textContent="Save failed"; }
 };
+
+let replayRec = localStorage.getItem("replayRec")==="1";
+function paintReplay(){ const b=$("replayToggle"); if(!b) return; b.classList.toggle("on",replayRec); b.textContent="🎬 Record from replay: "+(replayRec?"on":"off"); }
+async function syncReplay(){ try{ await fetch("/replay_recording",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:replayRec})}); }catch(_){} }
+$("replayToggle").onclick=async()=>{ replayRec=!replayRec; localStorage.setItem("replayRec",replayRec?"1":"0"); paintReplay(); await syncReplay(); };
+paintReplay(); if(replayRec) syncReplay();
 
 function showCards(cards){
   lastCards = cards;

@@ -70,6 +70,7 @@ class AppState:
         self.clock = 0.0
         self.snapshot = {"connected": False, "in_race": False}
         self._baseline_seen = 0
+        self.replay_recording = False
         self.callout_engine = CalloutEngine()
         self.callout_log: list[dict] = []
         self._callout_seq = 0
@@ -144,9 +145,21 @@ class AppState:
             self.clock = 0.0
         self.gt7_ip = ip
         self._baseline_seen = 0
+        self.set_replay_recording(self.replay_recording)   # survive provider rebuild
         if persist and not os.getenv("GT7_IP"):     # env override stays authoritative
             user_config.save({"gt7_ip": ip})
         self._build_engineer()
+
+    def set_replay_recording(self, on: bool) -> None:
+        """Toggle 'record even when not in a live race' on the current provider.
+
+        Needed to capture a reference lap from a GT7 replay. No-op for the
+        synthetic provider; re-applied whenever the live provider is rebuilt.
+        """
+        self.replay_recording = bool(on)
+        p = self.provider
+        if hasattr(p, "set_replay_recording"):
+            p.set_replay_recording(self.replay_recording)
 
 
 state = AppState()
@@ -463,7 +476,15 @@ async def health():
 async def get_config():
     return JSONResponse({"gt7_ip": state.gt7_ip, "synthetic": state._synthetic,
                          "env_override": bool(os.getenv("GT7_IP")),
+                         "replay_recording": state.replay_recording,
                          "config_path": str(user_config.config_path())})
+
+
+@app.post("/replay_recording")
+async def set_replay_recording(req: Request):
+    body = await req.json()
+    state.set_replay_recording(bool(body.get("on")))
+    return JSONResponse({"on": state.replay_recording})
 
 
 @app.post("/config")

@@ -189,6 +189,19 @@ class RealProvider:
         except Exception:
             pass
 
+    def set_replay_recording(self, on: bool) -> None:
+        """Record telemetry even when GT7's 'in race' flag is clear.
+
+        GT7 replays stream full telemetry but do NOT set the in-race bit, so
+        the capture loop otherwise resets the lap every packet and never
+        finalises one. Flipping gt7dashboard's always_record_data lets a lap
+        from a replay accumulate and finish (paused frames are still skipped).
+        """
+        try:
+            self._comm.always_record_data = bool(on)
+        except Exception:
+            pass
+
 
     @property
     def telemetry(self) -> TelemetryFrame:
