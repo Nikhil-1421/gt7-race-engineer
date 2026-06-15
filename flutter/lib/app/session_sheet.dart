@@ -11,6 +11,15 @@ import '../core/events.dart';
 import '../core/model.dart';
 import 'app_state.dart';
 
+/// Dashboard cards the user can show/hide, with display labels.
+const _toggleableCards = <(String, String)>[
+  ('live', 'Live telemetry'),
+  ('pit', 'Pit / Refuel'),
+  ('pace', 'Pace'),
+  ('deg', 'Tyre deg'),
+  ('tyres', 'Tyre temps'),
+];
+
 const Map<String, String> modeLabels = {
   'race': 'RACE',
   'time_trial': 'TIME TRIAL',
@@ -191,6 +200,30 @@ class _SessionSheetState extends State<SessionSheet> {
                   onPressed: _start,
                   icon: const Icon(Icons.flag),
                   label: const Text('Start session'),
+                ),
+                const SizedBox(height: 22),
+                const Divider(height: 1),
+                const SizedBox(height: 14),
+                const Text('Dashboard cards',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('Tap to show or hide cards on the dashboard.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8A929B))),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final c in _toggleableCards)
+                      FilterChip(
+                        label: Text(c.$2,
+                            style: const TextStyle(fontSize: 12)),
+                        selected: !widget.state.hiddenCards.contains(c.$1),
+                        onSelected: (_) =>
+                            setState(() => widget.state.toggleCard(c.$1)),
+                      ),
+                  ],
                 ),
               ],
             ),

@@ -252,12 +252,20 @@
     <div class="types" id="types"></div>
     <div id="fields"></div>
     <button class="apply" id="apply">Start session</button>
+    <h2 style="margin-top:18px">Dashboard cards</h2>
+    <div class="setuphint" style="margin:-6px 0 10px">Tap to show or hide cards on the dashboard.</div>
+    <div class="chips" id="layoutChips"></div>
   </div>
 
 <script>
 const $ = id => document.getElementById(id);
 let SCHEMAS = {}, curType = "race", curValues = {};
 let CATALOG = {tracks:[], cars:[]};
+let lastCards = null;
+const TOGGLEABLE_CARDS = [["live","Live telemetry"],["pit","Pit / Refuel"],["pace","Pace"],["deg","Tyre deg"],["tyres","Tyre temps"]];
+let HIDDEN = new Set();
+try { HIDDEN = new Set(JSON.parse(localStorage.getItem("gt7_hidden_cards")||"[]")); } catch(_){}
+function saveHidden(){ try{ localStorage.setItem("gt7_hidden_cards", JSON.stringify([...HIDDEN])); }catch(_){} }
 
 function tyColor(t){ if(t<70)return"var(--blue)"; if(t<=104)return"var(--accent)"; if(t<=112)return"var(--warn)"; return"var(--danger)"; }
 
@@ -266,7 +274,7 @@ async function loadSchemas(){
   try{ CATALOG = await (await fetch("/catalog")).json(); }catch(_){ CATALOG = {tracks:[],cars:[]}; }
   const sess = await (await fetch("/session")).json();
   curType = sess.type; curValues = {...sess.values};
-  renderTypes(); renderFields();
+  renderTypes(); renderFields(); renderLayout();
 }
 function renderTypes(){
   const order = ["race","time_trial","test_run","reference_lap","baseline"];
@@ -364,9 +372,22 @@ $("apply").onclick=async()=>{
 };
 
 function showCards(cards){
+  lastCards = cards;
   document.querySelectorAll("[data-card]").forEach(el=>{
-    el.style.display = cards && cards.includes(el.dataset.card) ? "" : "none";
+    const c=el.dataset.card;
+    el.style.display = (cards && cards.includes(c) && !HIDDEN.has(c)) ? "" : "none";
   });
+  const live=$("liveCard"); if(live) live.style.display = HIDDEN.has("live") ? "none" : "";
+}
+function renderLayout(){
+  const wrap=$("layoutChips"); if(!wrap) return; wrap.innerHTML="";
+  for(const [key,label] of TOGGLEABLE_CARDS){
+    const c=document.createElement("button");
+    c.className="chip"+(HIDDEN.has(key)?"":" on");
+    c.textContent=label;
+    c.onclick=()=>{ HIDDEN.has(key)?HIDDEN.delete(key):HIDDEN.add(key); saveHidden(); renderLayout(); showCards(lastCards); };
+    wrap.appendChild(c);
+  }
 }
 function setDelta(el,v,goodNeg){ if(v==null){el.textContent="–";el.className="";return;}
   el.textContent=(v>0?"+":"")+v.toFixed(3);

@@ -90,9 +90,11 @@ class HomeScreen extends StatelessWidget {
                     s['alert'] as String? ?? 'ok', s['alert_msg'] as String),
                 const SizedBox(height: 12),
               ],
-              _liveTelemetry(s),
-              const SizedBox(height: 12),
-              for (final c in cards) ...[
+              if (!state.hiddenCards.contains('live')) ...[
+                _liveTelemetry(s),
+                const SizedBox(height: 12),
+              ],
+              for (final c in cards.where((c) => !state.hiddenCards.contains(c))) ...[
                 _cardFor(c, s),
                 const SizedBox(height: 12),
               ],

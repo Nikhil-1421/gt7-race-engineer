@@ -30,6 +30,10 @@ class CalloutLine {
 class AppState extends ChangeNotifier {
   SharedPreferences? _prefs;
 
+  /// User-chosen dashboard cards to hide (UI-layer preference, persisted
+  /// locally; does not affect the parity-locked compute/snapshot).
+  Set<String> hiddenCards = {};
+
   // source
   Gt7Capture? capture;
   DemoProvider? demo;
@@ -63,6 +67,7 @@ class AppState extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     gt7Ip = _prefs?.getString('gt7_ip') ?? '';
     ttsEnabled = _prefs?.getBool('tts_enabled') ?? false;
+    hiddenCards = (_prefs?.getStringList('hidden_cards') ?? const []).toSet();
     catalog = await Catalog.load();
     await _startSource();
     _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
@@ -142,6 +147,17 @@ class AppState extends ChangeNotifier {
   Future<void> setTts(bool on) async {
     ttsEnabled = on;
     await _prefs?.setBool('tts_enabled', on);
+    notifyListeners();
+  }
+
+  /// Show/hide a dashboard card. UI-layer only; persisted locally.
+  Future<void> toggleCard(String key) async {
+    if (hiddenCards.contains(key)) {
+      hiddenCards.remove(key);
+    } else {
+      hiddenCards.add(key);
+    }
+    await _prefs?.setStringList('hidden_cards', hiddenCards.toList());
     notifyListeners();
   }
 
