@@ -6,6 +6,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +34,10 @@ class AppState extends ChangeNotifier {
   /// User-chosen dashboard cards to hide (UI-layer preference, persisted
   /// locally; does not affect the parity-locked compute/snapshot).
   Set<String> hiddenCards = {};
+
+  /// Saved sessions (newest first), persisted on-device. Each is the same
+  /// shape the server's /sessions endpoints return.
+  List<Map<String, dynamic>> _sessions = [];
 
   // source
   Gt7Capture? capture;
@@ -68,6 +73,16 @@ class AppState extends ChangeNotifier {
     gt7Ip = _prefs?.getString('gt7_ip') ?? '';
     ttsEnabled = _prefs?.getBool('tts_enabled') ?? false;
     hiddenCards = (_prefs?.getStringList('hidden_cards') ?? const []).toSet();
+    final rawSessions = _prefs?.getString('sessions');
+    if (rawSessions != null) {
+      try {
+        _sessions = (jsonDecode(rawSessions) as List)
+            .map((e) => (e as Map).cast<String, dynamic>())
+            .toList();
+      } catch (_) {
+        _sessions = [];
+      }
+    }
     catalog = await Catalog.load();
     await _startSource();
     _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) => _tick());
@@ -250,6 +265,98 @@ class AppState extends ChangeNotifier {
     data['total_delta_s'] = rep['total_delta_s'];
     data['improvements'] = rep['improvements'];
     return data;
+  }
+
+  // ---- Session history (on-device store, mirrors the server's /sessions) ---
+
+  List<Map<String, dynamic>> sessionSummaries() => [
+        for (final r in _sessions)
+          {
+            'id': r['id'],
+            'saved_at': r['saved_at'],
+            'event_type': r['event_type'],
+            'track': r['track'],
+            'total_laps': r['total_laps'],
+            'best_lap_ms': r['best_lap_ms'],
+            'has_analysis':
+                r['comparison'] != null && (r['comparison'] as Map)['available'] == true,
+          }
+      ];
+
+  Map<String, dynamic>? sessionRecord(String id) {
+    for (final r in _sessions) {
+      if (r['id'] == id) return r;
+    }
+    return null;
+  }
+
+  /// Snapshot the current session (laps + latest-vs-fastest comparison) and
+  /// persist it. Returns the saved record, or null if there are no laps.
+  Future<Map<String, dynamic>?> saveSession() async {
+    final laps = capture?.laps ?? demo?.laps ?? const <LapRecord>[];
+    if (laps.isEmpty) return null;
+    final traces = capture?.lapTraces ?? demo?.lapTraces ?? const <LapTrace>[];
+
+    final lapDicts = [
+      for (final l in laps)
+        {
+          'number': l.number,
+          'time_ms': l.lapFinishTimeMs,
+          'fuel_consumed': double.parse(l.fuelConsumed.toStringAsFixed(2)),
+          'fuel_at_end': double.parse(l.fuelAtEnd.toStringAsFixed(2)),
+          'stint': l.stintLap,
+          'outlier': l.isOutlier,
+        }
+    ];
+    var best = -1;
+    for (final l in laps) {
+      if (l.lapFinishTimeMs > 0 &&
+          !l.isOutlier &&
+          (best < 0 || l.lapFinishTimeMs < best)) {
+        best = l.lapFinishTimeMs;
+      }
+    }
+
+    Map<String, dynamic>? comparison;
+    if (traces.length >= 2) {
+      final target = traces.last;
+      LapTrace reference = traces.first;
+      var bd = double.infinity;
+      for (var i = 0; i < traces.length - 1; i++) {
+        final f = traces[i].tMs.isNotEmpty ? traces[i].tMs.last : double.infinity;
+        if (f < bd) {
+          bd = f;
+          reference = traces[i];
+        }
+      }
+      comparison = comparisonTraces(target, reference);
+      final rep = analyze(target, reference);
+      comparison['total_delta_s'] = rep['total_delta_s'];
+      comparison['improvements'] = rep['improvements'];
+    }
+
+    final track = (snapshot['track_name'] as String?) ?? '';
+    final rec = <String, dynamic>{
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'saved_at': DateTime.now().millisecondsSinceEpoch / 1000.0,
+      'event_type': snapshot['event_type'] ?? event.type.value,
+      'track': track.isNotEmpty ? track : 'Unknown',
+      'total_laps': laps.length,
+      'best_lap_ms': best,
+      'laps': lapDicts,
+      'comparison': comparison,
+    };
+    _sessions.insert(0, rec);
+    if (_sessions.length > 30) _sessions.removeRange(30, _sessions.length);
+    await _prefs?.setString('sessions', jsonEncode(_sessions));
+    notifyListeners();
+    return rec;
+  }
+
+  Future<void> deleteSession(String id) async {
+    _sessions.removeWhere((r) => r['id'] == id);
+    await _prefs?.setString('sessions', jsonEncode(_sessions));
+    notifyListeners();
   }
 
   @override

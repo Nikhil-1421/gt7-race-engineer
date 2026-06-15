@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'analysis_screen.dart';
 import 'app_state.dart';
+import 'history_screen.dart';
 import 'session_sheet.dart';
 
 const _ok = Color(0xFF35C46B);
@@ -50,6 +51,15 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => AnalysisScreen(state: state),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Session history',
+                icon: const Icon(Icons.history),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => HistoryScreen(state: state),
                   ),
                 ),
               ),

@@ -96,6 +96,11 @@
   .gfzone{padding:8px 0;border-top:1px solid #1a212c}
   .gfzone .h{display:flex;justify-content:space-between;font-weight:600;font-size:13px}
   .gfzone .n{color:var(--dim);font-size:12px;margin-top:2px}
+  .histrow{padding:10px 0;border-top:1px solid #1a212c}
+  .histrow .hh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px}
+  .histrow .n{color:var(--dim);font-size:12px}
+  .histbtn{background:#11151c;border:1px solid #1e2530;color:var(--accent);padding:5px 10px;border-radius:8px;font-size:12px;cursor:pointer}
+  .histbtn.del{color:var(--danger)}
 </style>
 </head>
 <body>
@@ -110,6 +115,7 @@
   <div class="tabbar">
     <button id="tabDash" class="tabbtn sel">Dashboard</button>
     <button id="tabGetFaster" class="tabbtn">Get Faster</button>
+    <button id="tabHistory" class="tabbtn">History</button>
   </div>
 
   <div id="dashboardView">
@@ -242,6 +248,17 @@
     <div class="card" id="gfZones">
       <h3>Where you're losing time</h3>
       <div id="gfZoneList" class="muted">Run two laps, then tap Analyze.</div>
+    </div>
+  </div>
+
+  <div id="historyView" style="display:none">
+    <div class="card">
+      <h3>Session history</h3>
+      <div class="gfctl">
+        <button class="engbtn" id="histSave">💾 Save current session</button>
+        <span id="histStatus" class="muted">—</span>
+      </div>
+      <div id="histList" class="muted">No saved sessions yet.</div>
     </div>
   </div>
 
@@ -509,15 +526,6 @@ let ws;
 let GF=null, gfCursor=null;
 const GF_CHARTS=["gfDelta","gfSpeed","gfThrottle","gfBrake"];
 
-function showTab(which){
-  const dash=which==="dash";
-  $("dashboardView").style.display=dash?"":"none";
-  $("analysisView").style.display=dash?"none":"";
-  $("tabDash").classList.toggle("sel",dash);
-  $("tabGetFaster").classList.toggle("sel",!dash);
-  if(!dash){ if(!GF) fetchAnalysis(); else drawGF(); }
-}
-
 async function fetchAnalysis(){
   $("gfStatus").textContent="Analyzing…";
   try{
@@ -586,9 +594,57 @@ function renderZones(d){ const el=$("gfZoneList");
   el.innerHTML=d.improvements.map((z,i)=>'<div class="gfzone"><div class="h"><span>'+(i+1)+'. '+z.start_m+'–'+z.end_m+' m'+(z.sector?' · S'+z.sector:'')+'</span><span class="neg">−'+z.time_lost_s+'s</span></div>'+z.notes.map(n=>'<div class="n">• '+n+'</div>').join("")+'</div>').join("");
 }
 
+function showTab(which){
+  $("dashboardView").style.display = which==="dash" ? "" : "none";
+  $("analysisView").style.display = which==="gf" ? "" : "none";
+  $("historyView").style.display = which==="history" ? "" : "none";
+  $("tabDash").classList.toggle("sel",which==="dash");
+  $("tabGetFaster").classList.toggle("sel",which==="gf");
+  $("tabHistory").classList.toggle("sel",which==="history");
+  if(which==="gf"){ if(!GF) fetchAnalysis(); else drawGF(); }
+  if(which==="history"){ fetchSessions(); }
+}
+
+function fmtMs(ms){ if(ms==null||ms<0) return "—"; const m=Math.floor(ms/60000); const s=((ms%60000)/1000).toFixed(3).padStart(6,"0"); return m+":"+s; }
+async function fetchSessions(){
+  try{ renderSessions(await (await fetch("/sessions")).json()); }
+  catch(e){ $("histStatus").textContent="Error loading sessions"; }
+}
+function renderSessions(list){
+  const el=$("histList");
+  if(!list||!list.length){ el.textContent="No saved sessions yet. Finish a session and tap Save."; return; }
+  el.innerHTML=list.map(s=>{
+    const d=new Date(s.saved_at*1000);
+    const when=d.toLocaleDateString()+" "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    return '<div class="histrow"><div class="hh"><span><b>'+(s.track||"Unknown")+'</b> · '+(s.event_type||"race").replace("_"," ")+'</span><span class="n">'+when+'</span></div>'
+      +'<div class="hh"><span class="n">'+s.total_laps+' laps · best '+fmtMs(s.best_lap_ms)+'</span><span>'
+      +(s.has_analysis?'<button class="histbtn" onclick="openSession(\''+s.id+'\')">Open</button> ':'<span class="n">no analysis </span>')
+      +'<button class="histbtn del" onclick="deleteSession(\''+s.id+'\')">✕</button></span></div></div>';
+  }).join("");
+}
+async function saveSession(){
+  $("histStatus").textContent="Saving…";
+  try{ const r=await (await fetch("/sessions",{method:"POST"})).json();
+    $("histStatus").textContent = r.ok ? ("Saved "+(r.track||"")+" — "+r.total_laps+" laps") : (r.error||"Save failed");
+    fetchSessions();
+  }catch(e){ $("histStatus").textContent="Save failed"; }
+}
+async function openSession(id){
+  try{ const rec=await (await fetch("/sessions/"+id)).json();
+    if(!rec.comparison||!rec.comparison.available){ $("histStatus").textContent="That session has no lap comparison (needs 2+ laps)."; return; }
+    GF=rec.comparison; gfCursor=null;
+    $("gfSummary").textContent=(GF.total_delta_s>=0?"+":"")+GF.total_delta_s+" s";
+    $("gfStatus").textContent="From history · "+(rec.track||"")+" · "+rec.total_laps+" laps";
+    renderZones(GF); showTab("gf");
+  }catch(e){ $("histStatus").textContent="Couldn't open session"; }
+}
+async function deleteSession(id){ try{ await fetch("/sessions/"+id,{method:"DELETE"}); fetchSessions(); }catch(e){} }
+
 $("tabDash").onclick=()=>showTab("dash");
 $("tabGetFaster").onclick=()=>showTab("gf");
+$("tabHistory").onclick=()=>showTab("history");
 $("gfRefresh").onclick=fetchAnalysis;
+$("histSave").onclick=saveSession;
 window.addEventListener("resize",()=>{ if($("analysisView").style.display!=="none"&&GF) drawGF(); });
 
 function connect(){

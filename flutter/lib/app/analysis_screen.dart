@@ -21,7 +21,11 @@ const _surface = Color(0xFF191D21);
 
 class AnalysisScreen extends StatefulWidget {
   final AppState state;
-  const AnalysisScreen({super.key, required this.state});
+
+  /// Optional pre-computed comparison (a saved session). When null, the screen
+  /// computes the live latest-vs-fastest comparison from [AppState].
+  final Map<String, dynamic>? data;
+  const AnalysisScreen({super.key, required this.state, this.data});
 
   @override
   State<AnalysisScreen> createState() => _AnalysisScreenState();
@@ -46,7 +50,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   void _load() {
     setState(() {
       _cursor.value = null;
-      _data = widget.state.lapComparison();
+      _data = widget.data ?? widget.state.lapComparison();
     });
   }
 
@@ -61,14 +65,15 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       backgroundColor: const Color(0xFF0B0E12),
       appBar: AppBar(
         backgroundColor: const Color(0xFF14171A),
-        title: const Text('Get Faster',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+        title: Text(widget.data == null ? 'Get Faster' : 'Saved session',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         actions: [
-          IconButton(
-            tooltip: 'Analyze last lap',
-            icon: const Icon(Icons.refresh),
-            onPressed: _load,
-          ),
+          if (widget.data == null)
+            IconButton(
+              tooltip: 'Analyze last lap',
+              icon: const Icon(Icons.refresh),
+              onPressed: _load,
+            ),
         ],
       ),
       body: !available

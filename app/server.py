@@ -34,6 +34,7 @@ from app.events import EventConfig, EventType, schemas_payload
 from app.engineer import SessionEngineer
 from app.providers import SyntheticProvider, RealProvider
 from app.track_store import TrackStore, BaselineRecorder, TrackBaseline
+from app.session_store import SessionStore, SessionRecord
 from app.analysis import LapTrace, analyze, comparison_traces, format_report
 from app.callouts import CalloutEngine
 from app.voice_intent import parse as parse_intent
@@ -45,6 +46,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 class AppState:
     def __init__(self):
         self.tracks = TrackStore()
+        self.sessions = SessionStore()
         self.speed = float(os.getenv("GT7_SPEED", 1.0))
 
         ip = user_config.get_gt7_ip()          # env GT7_IP > config file > ''
@@ -333,6 +335,65 @@ async def lap_trace():
     data["total_delta_s"] = rep["total_delta_s"]
     data["improvements"] = rep["improvements"]
     return JSONResponse(data)
+
+
+def _build_session_record(st) -> SessionRecord:
+    """Snapshot the current session: lap summaries + the latest-vs-fastest
+    comparison (same parity-locked math the live Get Faster view uses)."""
+    laps = st.provider.laps
+    traces = getattr(st.provider, "lap_traces", [])
+    lap_dicts = [{"number": l.number, "time_ms": l.lap_finish_time_ms,
+                  "fuel_consumed": round(l.fuel_consumed, 2),
+                  "fuel_at_end": round(l.fuel_at_end, 2),
+                  "stint": l.stint_lap, "outlier": l.is_outlier} for l in laps]
+    best = min((l.lap_finish_time_ms for l in laps
+                if l.lap_finish_time_ms > 0 and not l.is_outlier), default=-1)
+    comparison = None
+    if len(traces) >= 2:
+        target = traces[-1]
+        reference = min(traces[:-1], key=lambda t: (t.t_ms[-1] if t.t_ms else 9e18))
+        comparison = comparison_traces(target, reference)
+        rep = analyze(target, reference)
+        comparison["total_delta_s"] = rep["total_delta_s"]
+        comparison["improvements"] = rep["improvements"]
+    return SessionRecord(
+        id=str(int(time.time() * 1000)),
+        saved_at=time.time(),
+        event_type=st.event.type.value,
+        track=st.event.get("track_name", "") or "Unknown",
+        total_laps=len(laps),
+        best_lap_ms=best,
+        laps=lap_dicts,
+        comparison=comparison,
+    )
+
+
+@app.post("/sessions")
+async def save_session():
+    if not state.provider.laps:
+        return JSONResponse({"ok": False, "error": "no completed laps to save"},
+                            status_code=400)
+    rec = _build_session_record(state)
+    state.sessions.add(rec)
+    return JSONResponse({"ok": True, **rec.summary()})
+
+
+@app.get("/sessions")
+async def list_sessions():
+    return JSONResponse(state.sessions.summaries())
+
+
+@app.get("/sessions/{sid}")
+async def get_session_record(sid: str):
+    rec = state.sessions.get(sid)
+    if not rec:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(rec.to_dict())
+
+
+@app.delete("/sessions/{sid}")
+async def delete_session(sid: str):
+    return JSONResponse({"ok": state.sessions.delete(sid)})
 
 
 @app.get("/laps")
