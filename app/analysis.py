@@ -179,6 +179,47 @@ def _diagnose(grid, i, j, lost, sectors,
                            sector=_sector_of(start_m, sectors), notes=notes)
 
 
+def comparison_traces(target: LapTrace, reference: LapTrace,
+                      n_grid: int = 400, n_out: int = 200) -> dict:
+    """Resample both laps onto a common distance grid for plotting: per-channel
+    arrays for target & reference, the delta trace, and the target's racing line
+    (x/z) on the same grid so a single 'cursor distance' links charts <-> map.
+    Purely deterministic; parity-locked against the Dart twin."""
+    tx, tz, ts, tth, tbr, tt = target.arrays()
+    rx, rz, rs, rth, rbr, rt = reference.arrays()
+    td, rd = _cum_dist(tx, tz), _cum_dist(rx, rz)
+    L = float(min(td[-1], rd[-1]))
+    grid = np.linspace(0, L, n_grid)
+
+    t_time = _resample(td, tt, grid)
+    r_time = _resample(rd, rt, grid)
+    delta = (t_time - r_time) / 1000.0
+    delta -= delta[0]
+
+    t_speed = _resample(td, ts, grid); r_speed = _resample(rd, rs, grid)
+    t_thr = _resample(td, tth, grid);  r_thr = _resample(rd, rth, grid)
+    t_brk = _resample(td, tbr, grid);  r_brk = _resample(rd, rbr, grid)
+    line_x = _resample(td, tx, grid);  line_z = _resample(td, tz, grid)
+
+    step = max(1, n_grid // n_out)
+    sl = slice(0, n_grid, step)
+
+    def R(a, nd):
+        return [round(float(v), nd) for v in a[sl]]
+
+    return {
+        "available": True,
+        "target": target.label, "reference": reference.label,
+        "lap_length_m": round(L, 0),
+        "dist_m": R(grid, 1),
+        "t_speed": R(t_speed, 1), "r_speed": R(r_speed, 1),
+        "t_throttle": R(t_thr, 0), "r_throttle": R(r_thr, 0),
+        "t_brake": R(t_brk, 0), "r_brake": R(r_brk, 0),
+        "delta_s": R(delta, 3),
+        "line_x": R(line_x, 1), "line_z": R(line_z, 1),
+    }
+
+
 def format_report(rep: dict) -> str:
     lines = [f"Post-session: {rep['target']} vs {rep['reference']}  "
              f"({rep['lap_length_m']:.0f} m lap)",

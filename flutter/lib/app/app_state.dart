@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/analysis.dart';
 import '../core/callouts.dart';
 import '../core/capture.dart';
 import '../core/catalog.dart';
@@ -171,6 +172,11 @@ class AppState extends ChangeNotifier {
         tyreTempFr: tel.tyreTempFr,
         tyreTempRl: tel.tyreTempRl,
         tyreTempRr: tel.tyreTempRr,
+        rpm: tel.rpm,
+        gear: tel.gear,
+        boost: tel.boost,
+        oilTemp: tel.oilTemp,
+        waterTemp: tel.waterTemp,
       );
       laps = capture!.laps;
     } else {
@@ -182,6 +188,16 @@ class AppState extends ChangeNotifier {
     snapshot = engineer.snapshot(tel, laps, _simClock);
     snapshot['gt7_ip'] = gt7Ip;
     snapshot['synthetic'] = synthetic;
+    snapshot['live'] = {
+      'speed_kmh': tel.carSpeed.round(),
+      'rpm': tel.rpm.round(),
+      'gear': tel.gear,
+      'throttle': tel.throttle.round(),
+      'brake': tel.brake.round(),
+      'boost': double.parse(tel.boost.toStringAsFixed(2)),
+      'water_temp': tel.waterTemp.round(),
+      'oil_temp': tel.oilTemp.round(),
+    };
 
     for (final c in callouts.ingest(snapshot, _simClock)) {
       _calloutSeq++;
@@ -192,6 +208,32 @@ class AppState extends ChangeNotifier {
       calloutLog.removeRange(0, calloutLog.length - 30);
     }
     notifyListeners();
+  }
+
+  /// Comparison data for the Get Faster charts + Race Lines map — computed
+  /// on-device from buffered lap traces, with the same shape as the server's
+  /// /lap_trace endpoint (latest lap vs the fastest earlier lap).
+  Map<String, dynamic> lapComparison() {
+    final traces =
+        capture?.lapTraces ?? demo?.lapTraces ?? const <LapTrace>[];
+    if (traces.length < 2) {
+      return {'available': false, 'reason': 'need at least 2 completed laps'};
+    }
+    final target = traces.last;
+    LapTrace reference = traces.first;
+    var best = double.infinity;
+    for (var i = 0; i < traces.length - 1; i++) {
+      final f = traces[i].tMs.isNotEmpty ? traces[i].tMs.last : double.infinity;
+      if (f < best) {
+        best = f;
+        reference = traces[i];
+      }
+    }
+    final data = comparisonTraces(target, reference);
+    final rep = analyze(target, reference);
+    data['total_delta_s'] = rep['total_delta_s'];
+    data['improvements'] = rep['improvements'];
+    return data;
   }
 
   @override

@@ -109,6 +109,24 @@ class SyntheticProvider:
         self.telemetry.tyre_temp_rl = self._tyre_base + min(15, self._stint_lap * 1.3)
         self.telemetry.tyre_temp_rr = self.telemetry.tyre_temp_rl + self._rng.uniform(1, 3)
 
+        # animate instantaneous channels around the lap so the live gauges move
+        import math
+        frac = (self._lap_elapsed / self._lap_target) if self._lap_target else 0.0
+        dip = 0.0
+        for cu, depth in ((0.25, 120.0), (0.75, 110.0)):
+            dd = abs(((frac - cu + 0.5) % 1.0) - 0.5)
+            if dd < 0.08:
+                dip = max(dip, depth * (1 - dd / 0.08))
+        spd = max(70.0, 230.0 - dip)
+        self.telemetry.car_speed = spd
+        self.telemetry.throttle = 100.0 if dip < 30 else max(0.0, 60.0 - dip)
+        self.telemetry.brake = min(100.0, dip) if dip > 30 else 0.0
+        self.telemetry.gear = max(1, min(6, int(spd // 40) + 1))
+        self.telemetry.rpm = 3500.0 + (spd % 40) / 40.0 * 4500.0
+        self.telemetry.boost = 0.6 if self.telemetry.throttle > 80 else 0.0
+        self.telemetry.water_temp = 92.0
+        self.telemetry.oil_temp = 104.0
+
         # complete a lap?
         if self._lap_elapsed >= self._lap_target:
             lap_ms = int(self._lap_target * 1000)
@@ -198,6 +216,11 @@ class RealProvider:
             tyre_temp_fr=getattr(d, "tyre_temp_FR", 0.0),
             tyre_temp_rl=getattr(d, "tyre_temp_rl", 0.0),
             tyre_temp_rr=getattr(d, "tyre_temp_rr", 0.0),
+            rpm=getattr(d, "rpm", 0.0),
+            gear=getattr(d, "current_gear", 0) or 0,
+            boost=getattr(d, "boost", 0.0),
+            oil_temp=getattr(d, "oil_temp", 0.0),
+            water_temp=getattr(d, "water_temp", 0.0),
         )
 
     @property

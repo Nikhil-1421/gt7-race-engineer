@@ -17,6 +17,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'analysis.dart';
 import 'model.dart';
 import 'packet.dart';
 
@@ -35,6 +36,10 @@ class Gt7Capture {
 
   TelemetryFrame last = const TelemetryFrame();
   final List<LapRecord> laps = [];
+  final List<LapTrace> lapTraces = [];
+
+  // current-lap per-tick channel buffers (mirrors SyntheticProvider.lap_traces)
+  final List<double> _cx = [], _cz = [], _cs = [], _cth = [], _cbr = [], _ct = [];
 
   double _lastDataAt = -1e9;
   int _packageId = 0;
@@ -117,6 +122,15 @@ class Gt7Capture {
       _stintLap = 0;
     }
 
+    if (cur > 0 && f.inRace) {
+      _cx.add(f.positionX);
+      _cz.add(f.positionZ);
+      _cs.add(f.carSpeed);
+      _cth.add(f.throttle);
+      _cbr.add(f.brake);
+      _ct.add((_now() - _lapStartAt) * 1000.0);
+    }
+
     last = f;
     _frames.add(f);
 
@@ -141,10 +155,34 @@ class Gt7Capture {
       stintLap: _stintLap,
       isOutlier: outlier,
     ));
+    if (_cx.length >= 3) {
+      lapTraces.add(LapTrace(
+        x: List.of(_cx),
+        z: List.of(_cz),
+        speed: List.of(_cs),
+        throttle: List.of(_cth),
+        brake: List.of(_cbr),
+        tMs: List.of(_ct),
+        label: 'lap$_prevLap',
+      ));
+    }
+    _cx.clear();
+    _cz.clear();
+    _cs.clear();
+    _cth.clear();
+    _cbr.clear();
+    _ct.clear();
   }
 
   void resetSession() {
     laps.clear();
+    lapTraces.clear();
+    _cx.clear();
+    _cz.clear();
+    _cs.clear();
+    _cth.clear();
+    _cbr.clear();
+    _ct.clear();
     _prevLap = -1;
     _fuelAtLapStart = null;
     _stintLap = 0;

@@ -44,6 +44,11 @@ class TelemetryFrame {
   final double tyreTempFr;
   final double tyreTempRl;
   final double tyreTempRr;
+  final double rpm;
+  final int gear;
+  final double boost;
+  final double oilTemp;
+  final double waterTemp;
 
   const TelemetryFrame({
     this.connected = false,
@@ -65,6 +70,11 @@ class TelemetryFrame {
     this.tyreTempFr = 0.0,
     this.tyreTempRl = 0.0,
     this.tyreTempRr = 0.0,
+    this.rpm = 0.0,
+    this.gear = 0,
+    this.boost = 0.0,
+    this.oilTemp = 0.0,
+    this.waterTemp = 0.0,
   });
 
   double get fuelPct =>
@@ -89,6 +99,11 @@ class TelemetryFrame {
         tyreTempFr: (j['tyre_temp_fr'] as num? ?? 0).toDouble(),
         tyreTempRl: (j['tyre_temp_rl'] as num? ?? 0).toDouble(),
         tyreTempRr: (j['tyre_temp_rr'] as num? ?? 0).toDouble(),
+        rpm: (j['rpm'] as num? ?? 0).toDouble(),
+        gear: (j['gear'] as num? ?? 0).toInt(),
+        boost: (j['boost'] as num? ?? 0).toDouble(),
+        oilTemp: (j['oil_temp'] as num? ?? 0).toDouble(),
+        waterTemp: (j['water_temp'] as num? ?? 0).toDouble(),
       );
 }
 

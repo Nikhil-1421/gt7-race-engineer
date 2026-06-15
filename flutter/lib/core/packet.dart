@@ -61,6 +61,11 @@ Gt7Packet parsePacket(Uint8List plain) {
     tyreTempFr: f32(0x64),
     tyreTempRl: f32(0x68),
     tyreTempRr: f32(0x6C),
+    rpm: f32(0x3C),
+    gear: gearByte & 0x0F,
+    boost: f32(0x50) - 1, // stored as pressure ratio; -1 → bar over atmospheric
+    oilTemp: f32(0x5C),
+    waterTemp: f32(0x58),
   );
   return Gt7Packet(
     frame: frame,

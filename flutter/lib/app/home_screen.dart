@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'analysis_screen.dart';
 import 'app_state.dart';
 import 'session_sheet.dart';
 
@@ -43,6 +44,15 @@ class HomeScreen extends StatelessWidget {
             ),
             actions: [
               _modePill(s['event_type'] as String? ?? 'race'),
+              IconButton(
+                tooltip: 'Get Faster — lap comparison',
+                icon: const Icon(Icons.timeline),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AnalysisScreen(state: state),
+                  ),
+                ),
+              ),
               IconButton(
                 tooltip: state.ttsEnabled
                     ? 'Mute radio voice'
@@ -80,6 +90,8 @@ class HomeScreen extends StatelessWidget {
                     s['alert'] as String? ?? 'ok', s['alert_msg'] as String),
                 const SizedBox(height: 12),
               ],
+              _liveTelemetry(s),
+              const SizedBox(height: 12),
               for (final c in cards) ...[
                 _cardFor(c, s),
                 const SizedBox(height: 12),
@@ -166,6 +178,81 @@ class HomeScreen extends StatelessWidget {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  // ---- LIVE telemetry (always visible) ------------------------------------
+  Widget _liveTelemetry(Map<String, dynamic> s) {
+    final lv = (s['live'] as Map?)?.cast<String, dynamic>() ?? const {};
+    num n(String k) => (lv[k] as num?) ?? 0;
+    final gear = (lv['gear'] as num?)?.toInt() ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: _surface, borderRadius: BorderRadius.circular(16)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('LIVE',
+              style: TextStyle(
+                  fontSize: 11, letterSpacing: 1.2, color: _dim)),
+          const Spacer(),
+          Text(gear > 0 ? 'G$gear' : 'N',
+              style: const TextStyle(fontSize: 13, color: Colors.white70)),
+        ]),
+        const SizedBox(height: 8),
+        Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text('${n('speed_kmh').round()}',
+                  style: const TextStyle(
+                      fontSize: 38, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 4),
+              const Text('km/h',
+                  style: TextStyle(color: _dim, fontSize: 14)),
+              const Spacer(),
+              Text('${n('rpm').round()} rpm',
+                  style:
+                      const TextStyle(fontSize: 13, color: Colors.white70)),
+            ]),
+        const SizedBox(height: 10),
+        _bar('Throttle', n('throttle').toDouble(), 100, _ok),
+        _bar('Brake', n('brake').toDouble(), 100, _bad),
+        _bar('RPM', n('rpm').toDouble(), 8000, const Color(0xFF5AA9FF)),
+        const SizedBox(height: 2),
+        Row(children: [
+          Text('boost ${n('boost')}',
+              style: const TextStyle(color: _dim, fontSize: 12)),
+          const Spacer(),
+          Text(
+              'water ${n('water_temp').round()}°  oil ${n('oil_temp').round()}°',
+              style: const TextStyle(color: _dim, fontSize: 12)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _bar(String label, double value, double maxV, Color color) {
+    final frac = maxV <= 0 ? 0.0 : (value / maxV).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: _dim)),
+          const Spacer(),
+          Text(maxV == 100 ? '${value.round()}%' : value.round().toString(),
+              style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        ]),
+        const SizedBox(height: 3),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+              value: frac,
+              minHeight: 8,
+              backgroundColor: Colors.white10,
+              color: color),
+        ),
+      ]),
+    );
   }
 
   // ---- RACE: fuel hero (carries the race clock) ---------------------------

@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../../lib/core/analysis.dart';
 import '../../lib/core/callouts.dart';
 import '../../lib/core/engineer.dart';
 import '../../lib/core/events.dart';
@@ -201,6 +202,23 @@ void testMisc() {
   }
 }
 
+void testAnalysis() {
+  final v = loadJson('analysis.json');
+  for (final (i, c) in (v['cases'] as List).indexed) {
+    final t = LapTrace.fromJson((c['target'] as Map).cast<String, dynamic>());
+    final r =
+        LapTrace.fromJson((c['reference'] as Map).cast<String, dynamic>());
+    deepCompare(comparisonTraces(t, r), c['traces'], 'analysis[$i].traces');
+    final rep = analyze(t, r);
+    final core = {
+      'total_delta_s': rep['total_delta_s'],
+      'lap_length_m': rep['lap_length_m'],
+      'delta_trace': rep['delta_trace'],
+    };
+    deepCompare(core, c['analyze_core'], 'analysis[$i].analyze_core');
+  }
+}
+
 void main() {
   final families = {
     'salsa20': testSalsa,
@@ -208,6 +226,7 @@ void main() {
     'engineer': testEngineer,
     'callouts': testCallouts,
     'misc': testMisc,
+    'analysis': testAnalysis,
   };
   families.forEach((name, fn) {
     final before = failures;

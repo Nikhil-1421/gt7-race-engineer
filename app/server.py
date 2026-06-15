@@ -34,7 +34,7 @@ from app.events import EventConfig, EventType, schemas_payload
 from app.engineer import SessionEngineer
 from app.providers import SyntheticProvider, RealProvider
 from app.track_store import TrackStore, BaselineRecorder, TrackBaseline
-from app.analysis import LapTrace, analyze, format_report
+from app.analysis import LapTrace, analyze, comparison_traces, format_report
 from app.callouts import CalloutEngine
 from app.voice_intent import parse as parse_intent
 from app import config as user_config
@@ -165,6 +165,13 @@ async def compute_loop():
         snap["mode"] = state.mode
         snap["gt7_ip"] = state.gt7_ip
         snap["synthetic"] = state._synthetic
+        _tl = state.provider.telemetry
+        snap["live"] = {
+            "speed_kmh": round(_tl.car_speed), "rpm": round(_tl.rpm),
+            "gear": _tl.gear, "throttle": round(_tl.throttle),
+            "brake": round(_tl.brake), "boost": round(_tl.boost, 2),
+            "water_temp": round(_tl.water_temp), "oil_temp": round(_tl.oil_temp),
+        }
         # central callouts — every output (phone, Mac, Discord) consumes these
         for c in state.callout_engine.ingest(snap, state.clock):
             state._callout_seq += 1
@@ -307,6 +314,25 @@ async def analyze_ep(req: Request):
                   sector_bounds_m=body.get("sectors"))
     rep["report_text"] = format_report(rep)
     return JSONResponse(rep)
+
+
+@app.get("/lap_trace")
+async def lap_trace():
+    """Comparison data for the Get Faster charts + Race Lines map: the latest
+    completed lap vs the fastest earlier lap, resampled onto one distance grid
+    so a single cursor distance links every chart and the map."""
+    traces = getattr(state.provider, "lap_traces", [])
+    if len(traces) < 2:
+        return JSONResponse({"available": False,
+                             "reason": "need at least 2 completed laps"})
+    target = traces[-1]
+    reference = min(traces[:-1],
+                    key=lambda t: (t.t_ms[-1] if t.t_ms else 9e18))
+    data = comparison_traces(target, reference)
+    rep = analyze(target, reference)
+    data["total_delta_s"] = rep["total_delta_s"]
+    data["improvements"] = rep["improvements"]
+    return JSONResponse(data)
 
 
 @app.get("/laps")

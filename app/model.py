@@ -48,6 +48,11 @@ class TelemetryFrame:
     tyre_temp_fr: float = 0.0
     tyre_temp_rl: float = 0.0
     tyre_temp_rr: float = 0.0
+    rpm: float = 0.0
+    gear: int = 0
+    boost: float = 0.0
+    oil_temp: float = 0.0
+    water_temp: float = 0.0
 
     @property
     def fuel_pct(self) -> float:
