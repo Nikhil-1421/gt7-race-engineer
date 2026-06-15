@@ -269,6 +269,10 @@
     <div class="types" id="types"></div>
     <div id="fields"></div>
     <button class="apply" id="apply">Start session</button>
+    <h2 style="margin-top:18px">Reference lap</h2>
+    <div class="setuphint" style="margin:-6px 0 10px">Saves your last completed lap as this track's reference — used for the time-trial delta and the Get Faster map. Pick the track above first.</div>
+    <button class="engbtn" id="saveRefBtn">⭐ Save last lap as reference</button>
+    <div id="saveRefStatus" class="muted" style="margin-top:6px"></div>
     <h2 style="margin-top:18px">Dashboard cards</h2>
     <div class="setuphint" style="margin:-6px 0 10px">Tap to show or hide cards on the dashboard.</div>
     <div class="chips" id="layoutChips"></div>
@@ -386,6 +390,16 @@ $("apply").onclick=async()=>{
   await fetch("/session",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({type:curType,values:curValues})});
   openDrawer(false);
+};
+$("saveRefBtn").onclick=async()=>{
+  $("saveRefStatus").textContent="Saving…";
+  try{
+    const r=await (await fetch("/reference/save_last",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({track_name: curValues.track_name||""})})).json();
+    $("saveRefStatus").textContent = r.ok
+      ? ("Saved \u201C"+(r.name||"reference")+"\u201D"+(r.best_lap_str?" \u00B7 best "+r.best_lap_str:""))
+      : (r.error||"Could not save \u2014 complete a lap first");
+  }catch(e){ $("saveRefStatus").textContent="Save failed"; }
 };
 
 function showCards(cards){
