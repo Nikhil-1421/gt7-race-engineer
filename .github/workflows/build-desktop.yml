@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build
-        shell: ${{ runner.os == 'Windows' && 'cmd' || 'bash' }}
+        shell: ${{ matrix.shell }}
         run: ${{ matrix.build }}
 
       - name: Smoke test (headless boot + health check)
