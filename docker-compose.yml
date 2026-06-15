@@ -1,0 +1,12 @@
+services:
+  race-engineer:
+    build: .
+    # host networking is required for GT7's UDP telemetry (ports 33739/33740)
+    network_mode: host
+    environment:
+      # set your PlayStation's IP to capture live; omit for the synthetic demo
+      - GT7_IP=${GT7_IP:-}
+      - PORT=8000
+    volumes:
+      - ./data:/srv/data        # persist track baselines
+    restart: unless-stopped

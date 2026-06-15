@@ -1,0 +1,16 @@
+# --- server + dashboard (always needed) ---
+fastapi
+uvicorn[standard]
+websockets
+httpx
+python-dotenv
+# --- real PS5 capture path (gt7dashboard package) ---
+pycryptodome
+pandas
+scipy
+tabulate
+numpy
+# --- Discord voice engineer (two-way) ---
+py-cord[voice]
+PyNaCl
+# system dependency (not pip): ffmpeg  -> macOS: brew install ffmpeg

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>GT7 Race Engineer</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0b0d11" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="RaceEng" />
+<link rel="apple-touch-icon" href="/static/icon-180.png" />
+<style>
+  :root{
+    --bg:#0b0d11; --card:#161a22; --card2:#1d222c; --line:#272d39;
+    --txt:#e8ecf4; --dim:#8b95a7; --accent:#3ddc97; --warn:#ffb020; --danger:#ff4d5e; --blue:#5aa9ff;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       padding:env(safe-area-inset-top) 12px 24px;max-width:560px;margin:0 auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 2px 8px}
+  .mode{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .pill{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+        border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--danger);margin-right:6px;
+       box-shadow:0 0 8px currentColor;transition:background .3s}
+  .dot.live{background:var(--accent)}
+  .gear{background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
+        padding:7px 11px;font-size:15px;cursor:pointer}
+  .clock{display:flex;align-items:baseline;gap:10px;margin:2px 0 14px}
+  .clock .t{font-family:var(--mono);font-size:56px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  .clock .sub{color:var(--dim);font-size:13px}
+  .banner{display:none;border-radius:12px;padding:12px 14px;font-weight:600;margin-bottom:12px;font-size:15px}
+  .banner.warn{display:block;background:rgba(255,176,32,.14);color:var(--warn);border:1px solid rgba(255,176,32,.35)}
+  .banner.danger{display:block;background:rgba(255,77,94,.16);color:var(--danger);border:1px solid rgba(255,77,94,.4);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.55}}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+  .hero .label{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
+  .hero .big{font-family:var(--mono);font-size:46px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .hero .unit{font-size:16px;color:var(--dim);margin-left:6px}
+  .bar{height:10px;background:var(--card2);border-radius:6px;overflow:hidden;margin:14px 0 10px}
+  .bar > i{display:block;height:100%;background:var(--accent);transition:width .4s,background .4s}
+  .heroflags{display:flex;justify-content:space-between;font-size:13px;color:var(--dim)}
+  .heroflags b{color:var(--txt);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .card h3{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:12px;font-weight:600}
+  .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .row:last-child{margin-bottom:0}
+  .row span{color:var(--dim);font-size:13px}
+  .row b{font-family:var(--mono);font-size:17px;font-variant-numeric:tabular-nums}
+  .pos{color:var(--accent)} .neg{color:var(--danger)} .amb{color:var(--warn)}
+  .tyres{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ty{background:var(--card2);border-radius:10px;padding:10px 0;text-align:center}
+  .ty .v{font-family:var(--mono);font-size:20px;font-weight:600}
+  .ty .k{font-size:10px;color:var(--dim);letter-spacing:.1em}
+  .engbar{display:flex;gap:8px;align-items:center;margin:0 0 12px}
+  .engbtn{flex:1;background:var(--card2);border:1px solid var(--line);color:var(--txt);padding:11px;border-radius:11px;font-size:13px;cursor:pointer}
+  .engbtn.on{border-color:var(--accent);color:var(--accent)}
+  .engbtn.ptt.live{border-color:var(--danger);color:var(--danger);animation:pulse 1s infinite}
+  .engsel{background:var(--card2);border:1px solid var(--line);color:var(--txt);padding:11px;border-radius:11px;font-size:13px}
+  /* setup */
+  .setup{margin:10px 0}
+  .setuprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;color:var(--dim);font-size:13px}
+  .setup input{flex:1;min-width:150px;background:#0f1218;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:9px 10px;font-size:14px}
+  .setuphint{color:var(--dim);font-size:11px}
+  /* drawer */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:9}
+  .scrim.open{display:block}
+  .drawer{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);
+          border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));
+          max-width:560px;margin:0 auto;z-index:10;transform:translateY(100%);transition:transform .25s;max-height:88vh;overflow:auto}
+  .drawer.open{transform:translateY(0)}
+  .drawer h2{font-size:15px;margin-bottom:12px}
+  .types{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+  .types button{background:var(--card2);border:1px solid var(--line);color:var(--txt);padding:11px;border-radius:11px;font-size:13px;cursor:pointer}
+  .types button.sel{border-color:var(--accent);color:var(--accent)}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+  .field input,.field select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+        padding:10px;border-radius:10px;font-size:15px;font-family:var(--mono)}
+  .field .hint{font-size:11px;color:var(--dim);margin-top:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips .chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card2);font-size:13px;cursor:pointer}
+  .chips .chip.on{border-color:var(--accent);color:var(--accent)}
+  .apply{width:100%;background:var(--accent);color:#06281c;border:none;font-weight:700;padding:13px;border-radius:12px;font-size:15px;margin-top:6px;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div><span id="dot" class="dot"></span><span id="conn" class="mode">connecting…</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="evpill" class="pill">RACE</span>
+      <button class="gear" id="gear">⚙</button>
+    </div>
+  </div>
+
+  <div class="engbar">
+    <button id="engToggle" class="engbtn">🔊 Engineer: off</button>
+    <select id="engVoice" class="engsel"><option value="device">Device voice</option><option value="premium">Premium voice</option></select>
+    <button id="ptt" class="engbtn ptt">🎙 Hold to ask</button>
+  </div>
+
+  <div class="clock" data-card="fuel">
+    <div class="t" id="clock">--:--</div>
+    <div class="sub">remaining<br><b id="lapsleft" style="color:var(--txt)">– laps</b></div>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <!-- first-run setup / connection state (self-managed visibility) -->
+  <div class="card setup" id="setupCard" style="display:none">
+    <h3 id="setupTitle">Connect your PlayStation</h3>
+    <div class="setuprow" id="setupStatus">Demo data is running. Find your PS5 to go live — make sure GT7 is open on the console.</div>
+    <div class="setuprow">
+      <button class="engbtn" id="btnDiscover">🔍 Find my PS5</button>
+      <input id="ipInput" inputmode="decimal" placeholder="or enter IP, e.g. 192.168.1.42" />
+      <button class="engbtn" id="btnSaveIp">Save</button>
+    </div>
+    <div class="setuphint">IP is on the console under Settings → Network → Connection Status. Saved for next launch.</div>
+  </div>
+
+  <!-- RACE hero -->
+  <div class="hero" data-card="fuel">
+    <div class="label">Fuel to flag · <span id="trackname">—</span></div>
+    <div><span class="big" id="fuelLaps">–</span><span class="unit">laps of fuel</span></div>
+    <div class="bar"><i id="fuelBar" style="width:0%"></i></div>
+    <div class="heroflags">
+      <div>tank <b id="fuelL">–</b> L · <b id="fuelPct">–</b>%</div>
+      <div>balance <b id="fuelBal">–</b></div>
+    </div>
+  </div>
+
+  <!-- TIME TRIAL hero -->
+  <div class="hero" data-card="timetrial" style="display:none">
+    <div class="label">Delta to reference · <span id="ttref">—</span></div>
+    <div><span class="big" id="ttDelta">–</span><span class="unit">s vs ref (best)</span></div>
+    <div class="heroflags"><div>last vs ref <b id="ttLast">–</b></div><div><b id="ttTire">–</b></div></div>
+  </div>
+
+  <!-- TEST RUN hero -->
+  <div class="hero" data-card="test" style="display:none">
+    <div class="label">Stint test · <span id="testTire">—</span></div>
+    <div><span class="big" id="testFpl">–</span><span class="unit">L / lap</span></div>
+    <div class="heroflags">
+      <div>range <b id="testRange">–</b> laps</div>
+      <div>stint <b id="testStint">–</b></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" data-card="pit">
+      <h3>Pit / Refuel</h3>
+      <div class="row"><span>Stops left</span><b id="stops">–</b></div>
+      <div class="row"><span>Pit by lap</span><b id="pitby">–</b></div>
+      <div class="row"><span>Add to finish</span><b id="addfuel">–</b></div>
+      <div class="row"><span>Stop time</span><b id="stoptime">–</b></div>
+    </div>
+
+    <div class="card" data-card="pace">
+      <h3>Pace</h3>
+      <div class="row"><span>Last</span><b id="last">–</b></div>
+      <div class="row"><span>Δ to best</span><b id="delta">–</b></div>
+      <div class="row"><span>Best</span><b id="best">–</b></div>
+      <div class="row"><span>Avg (5)</span><b id="avg">–</b></div>
+    </div>
+
+    <div class="card" data-card="deg">
+      <h3>Deg · Stint L<span id="stintlap">–</span></h3>
+      <div class="row"><span>Deg rate</span><b id="deg">–</b></div>
+      <div class="row"><span>Proj end-lap</span><b id="proj">–</b></div>
+      <div class="row"><span>Save target</span><b id="save">–</b></div>
+      <div class="row"><span>Speed</span><b id="speed">–</b></div>
+    </div>
+
+    <div class="card" data-card="tyres">
+      <h3>Tyre temps °C</h3>
+      <div class="tyres">
+        <div class="ty"><div class="v" id="tfl">–</div><div class="k">FL</div></div>
+        <div class="ty"><div class="v" id="tfr">–</div><div class="k">FR</div></div>
+        <div class="ty"><div class="v" id="trl">–</div><div class="k">RL</div></div>
+        <div class="ty"><div class="v" id="trr">–</div><div class="k">RR</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- settings drawer -->
+  <div class="scrim" id="scrim"></div>
+  <div class="drawer" id="drawer">
+    <h2>Session</h2>
+    <div class="types" id="types"></div>
+    <div id="fields"></div>
+    <button class="apply" id="apply">Start session</button>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+let SCHEMAS = {}, curType = "race", curValues = {};
+
+function tyColor(t){ if(t<70)return"var(--blue)"; if(t<=104)return"var(--accent)"; if(t<=112)return"var(--warn)"; return"var(--danger)"; }
+
+async function loadSchemas(){
+  SCHEMAS = await (await fetch("/schemas")).json();
+  const sess = await (await fetch("/session")).json();
+  curType = sess.type; curValues = {...sess.values};
+  renderTypes(); renderFields();
+}
+function renderTypes(){
+  const order = ["race","time_trial","test_run","reference_lap","baseline"];
+  const label = {race:"Race",time_trial:"Time Trial",test_run:"Test Run",reference_lap:"Reference",baseline:"Baseline"};
+  $("types").innerHTML = "";
+  order.forEach(t=>{
+    const b=document.createElement("button"); b.textContent=label[t]; b.className=t===curType?"sel":"";
+    b.onclick=()=>{ curType=t; curValues={}; (SCHEMAS[t]||[]).forEach(s=>curValues[s.key]=s.default); renderTypes(); renderFields(); };
+    $("types").appendChild(b);
+  });
+}
+function renderFields(){
+  const specs = SCHEMAS[curType]||[]; const box=$("fields"); box.innerHTML="";
+  specs.forEach(s=>{
+    if(!(s.key in curValues)) curValues[s.key]=s.default;
+    const f=document.createElement("div"); f.className="field";
+    const lab=document.createElement("label"); lab.textContent=s.label+(s.unit?` (${s.unit})`:""); f.appendChild(lab);
+    if(s.kind==="multi_enum"){
+      const wrap=document.createElement("div"); wrap.className="chips";
+      s.options.forEach(o=>{
+        const c=document.createElement("div"); c.className="chip"+((curValues[s.key]||[]).includes(o)?" on":""); c.textContent=o;
+        c.onclick=()=>{ const set=new Set(curValues[s.key]||[]); set.has(o)?set.delete(o):set.add(o); curValues[s.key]=[...set]; renderFields(); };
+        wrap.appendChild(c);
+      });
+      f.appendChild(wrap);
+    } else if(s.kind==="enum"){
+      const sel=document.createElement("select");
+      s.options.forEach(o=>{ const op=document.createElement("option"); op.value=o; op.textContent=o; if(String(curValues[s.key])===o)op.selected=true; sel.appendChild(op); });
+      sel.onchange=()=>curValues[s.key]=sel.value; f.appendChild(sel);
+    } else if(s.kind==="bool"){
+      const sel=document.createElement("select"); ["true","false"].forEach(o=>{const op=document.createElement("option");op.value=o;op.textContent=o;if(String(curValues[s.key])===o)op.selected=true;sel.appendChild(op);});
+      sel.onchange=()=>curValues[s.key]=sel.value==="true"; f.appendChild(sel);
+    } else {
+      const inp=document.createElement("input"); inp.type=(s.kind==="int"||s.kind==="float")?"number":"text"; inp.value=curValues[s.key];
+      inp.oninput=()=>curValues[s.key]=(s.kind==="int")?parseInt(inp.value||0):(s.kind==="float")?parseFloat(inp.value||0):inp.value;
+      f.appendChild(inp);
+    }
+    if(s.help){ const h=document.createElement("div"); h.className="hint"; h.textContent=s.help; f.appendChild(h); }
+    box.appendChild(f);
+  });
+}
+function openDrawer(o){ $("scrim").classList.toggle("open",o); $("drawer").classList.toggle("open",o); }
+$("gear").onclick=()=>openDrawer(true); $("scrim").onclick=()=>openDrawer(false);
+$("apply").onclick=async()=>{
+  await fetch("/session",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({type:curType,values:curValues})});
+  openDrawer(false);
+};
+
+function showCards(cards){
+  document.querySelectorAll("[data-card]").forEach(el=>{
+    el.style.display = cards && cards.includes(el.dataset.card) ? "" : "none";
+  });
+}
+function setDelta(el,v,goodNeg){ if(v==null){el.textContent="–";el.className="";return;}
+  el.textContent=(v>0?"+":"")+v.toFixed(3);
+  el.className = goodNeg ? (v<0?"pos":(v>0.1?"neg":"amb")) : (v>0.3?"neg":(v<-0.05?"pos":"amb")); }
+
+function render(d){
+  $("dot").classList.toggle("live", !!d.connected);
+  $("conn").textContent = d.connected ? (d.in_race?"live · racing":"live · in menu") : "no signal";
+  $("evpill").textContent = (d.event_type||"race").replace("_"," ").toUpperCase();
+  showCards(d.cards);
+
+  // banner
+  const b=$("banner"); b.className="banner "+(d.alert||"");
+  b.textContent = (d.alert && d.alert!=="ok") ? (d.alert_msg||"") : "";
+
+  // RACE
+  $("clock").textContent=d.time_remaining_str??"--:--";
+  $("lapsleft").textContent=(d.laps_left_race??"–")+" laps";
+  $("trackname").textContent=d.track_name||"—";
+  $("fuelLaps").textContent=d.fuel_laps_left??"–";
+  $("fuelL").textContent=d.fuel_now_l??"–"; $("fuelPct").textContent=d.fuel_pct??"–";
+  $("fuelBar").style.width=(d.fuel_pct??0)+"%";
+  $("fuelBar").style.background=(d.fuel_pct!=null&&d.fuel_pct<15)?"var(--danger)":(d.fuel_pct<30?"var(--warn)":"var(--accent)");
+  const fb=$("fuelBal");
+  if(d.fuel_balance_laps==null){fb.textContent="–";fb.className="";}
+  else{fb.textContent=(d.fuel_balance_laps>0?"+":"")+d.fuel_balance_laps+" laps";fb.className=d.fuel_balance_laps<0?"neg":"pos";}
+  $("stops").textContent=d.stops_left??"–";
+  $("pitby").textContent=d.pit_by_lap!=null?("L"+d.pit_by_lap):"–";
+  $("addfuel").textContent=d.refuel_for_finish_l!=null?(d.refuel_for_finish_l+" L"):"–";
+  $("stoptime").textContent=d.refuel_time_s!=null?(d.refuel_time_s+" s"):"–";
+
+  // TIME TRIAL
+  $("ttref").textContent=d.reference_lap_str||"—";
+  $("ttDelta").textContent=d.delta_best_to_ref_s!=null?((d.delta_best_to_ref_s>0?"+":"")+d.delta_best_to_ref_s):"–";
+  $("ttDelta").className="big "+(d.delta_best_to_ref_s!=null?(d.delta_best_to_ref_s<0?"pos":"neg"):"");
+  $("ttLast").textContent=d.delta_last_to_ref_s!=null?((d.delta_last_to_ref_s>0?"+":"")+d.delta_last_to_ref_s+"s"):"–";
+  $("ttTire").textContent=d.tire_compound||"";
+
+  // TEST
+  $("testTire").textContent=d.tire_compound||"—";
+  $("testFpl").textContent=d.fuel_per_lap_l??"–";
+  $("testRange").textContent=d.fuel_range_laps??"–";
+  $("testStint").textContent=(d.stint_done!=null?d.stint_done:"–")+" / "+(d.stint_target??"–");
+
+  // PACE
+  $("last").textContent=d.last_lap_str??"–"; setDelta($("delta"),d.last_delta_s);
+  $("best").textContent=d.best_lap_str??"–"; $("avg").textContent=d.avg_lap_str??"–";
+
+  // DEG
+  $("stintlap").textContent=d.stint_lap??"–";
+  $("deg").textContent=d.deg_per_lap_s!=null?(d.deg_per_lap_s.toFixed(3)+" s"):"building…";
+  $("deg").className=d.deg_per_lap_s!=null&&d.deg_per_lap_s>0.12?"neg":"";
+  $("proj").textContent=d.proj_end_lap_str??"–";
+  $("save").textContent=d.fuel_save_target_l!=null?(d.fuel_save_target_l+" L/lap"):"—";
+  $("save").className=d.fuel_save_target_l!=null?"amb":"";
+  $("speed").textContent=d.speed_kmh!=null?(d.speed_kmh+" km/h"):"–";
+
+  // TYRES
+  const t=d.tyre_temps||{};
+  for(const [k,id] of [["fl","tfl"],["fr","tfr"],["rl","trl"],["rr","trr"]]){
+    const v=t[k]; const el=$(id); el.textContent=v!=null?Math.round(v):"–";
+    el.style.color=v!=null?tyColor(v):"var(--dim)";
+  }
+
+  renderSetup(d);
+}
+
+/* ---- first-run setup / connection card ---- */
+let discovering=false;
+function renderSetup(d){
+  const card=$("setupCard");
+  if(d.synthetic){
+    card.style.display="";
+    $("setupTitle").textContent="Connect your PlayStation";
+    if(!discovering) $("setupStatus").textContent="Demo data is running. Find your PS5 to go live — make sure GT7 is open on the console.";
+  } else if(!d.connected){
+    card.style.display="";
+    $("setupTitle").textContent="Waiting for telemetry…";
+    if(!discovering) $("setupStatus").textContent="Linked to "+(d.gt7_ip||"the console")+" but nothing is arriving. Is GT7 running, and are you on the same network?";
+  } else {
+    card.style.display="none"; discovering=false;
+  }
+}
+$("btnDiscover").onclick=async()=>{
+  if(discovering) return; discovering=true;
+  $("btnDiscover").textContent="Searching…";
+  $("setupStatus").textContent="Pinging the network for a console (≈6 s). GT7 must be open.";
+  try{
+    const r=await fetch("/discover",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    const j=await r.json();
+    $("setupStatus").textContent = j.ok ? ("Found your PS5 at "+j.ip+" — going live.")
+      : "No console answered. Check GT7 is running and both devices share the network, or enter the IP manually.";
+  }catch(_){ $("setupStatus").textContent="Discovery failed — enter the IP manually."; }
+  $("btnDiscover").textContent="🔍 Find my PS5"; discovering=false;
+};
+$("btnSaveIp").onclick=async()=>{
+  const ip=$("ipInput").value.trim(); if(!ip) return;
+  await fetch("/config",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({gt7_ip:ip})});
+  $("setupStatus").textContent="Saved — linking to "+ip+"…"; $("ipInput").value="";
+};
+
+let ws;
+function connect(){
+  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
+  ws.onmessage=e=>{try{const d=JSON.parse(e.data);render(d);engineerSpeak(d);}catch(_){}};
+  ws.onclose=()=>{$("dot").classList.remove("live");$("conn").textContent="reconnecting…";setTimeout(connect,1000);};
+  ws.onerror=()=>ws.close();
+}
+
+/* ---- engineer voice (party-compatible: phone -> earpiece) ---- */
+let engOn=false, voiceSrc="device", lastSpokenId=0, speakQ=[], speaking=false, keepAlive=null;
+function unlockAudio(){
+  // iOS requires a user gesture to start audio; also keep the session alive.
+  try{
+    const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u);
+    if(!keepAlive){
+      keepAlive=new Audio("data:audio/mp3;base64,//uQx"+ "A".repeat(60));
+      keepAlive.loop=true; keepAlive.volume=0; keepAlive.play().catch(()=>{});
+    }
+  }catch(_){}
+}
+async function speakText(text){ speakQ.push(text); if(!speaking) drainSpeak(); }
+async function drainSpeak(){
+  speaking=true;
+  while(speakQ.length){
+    const text=speakQ.shift();
+    try{
+      if(voiceSrc==="premium"){
+        const r=await fetch("/tts?text="+encodeURIComponent(text));
+        if(r.ok){ const b=await r.blob(); await new Promise(res=>{const a=new Audio(URL.createObjectURL(b));a.onended=res;a.onerror=res;a.play().catch(res);}); continue; }
+      }
+      await new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); u.rate=1.05; u.onend=res; u.onerror=res; speechSynthesis.speak(u); });
+    }catch(_){}
+  }
+  speaking=false;
+}
+function engineerSpeak(d){
+  if(!engOn || !Array.isArray(d.callouts)) return;
+  d.callouts.filter(c=>c.id>lastSpokenId).sort((a,b)=>a.id-b.id).forEach(c=>{ lastSpokenId=c.id; speakText(c.text); });
+}
+$("engToggle").onclick=()=>{
+  engOn=!engOn; $("engToggle").classList.toggle("on",engOn);
+  $("engToggle").textContent="🔊 Engineer: "+(engOn?"on":"off");
+  if(engOn){ unlockAudio(); lastSpokenId=Math.max(0,...(JSON.parse(sessionStorage.getItem("lastIds")||"[0]"))); speakText("Radio check."); }
+};
+$("engVoice").onchange=e=>voiceSrc=e.target.value;
+
+/* push-to-talk: browser STT needs a secure context (https or localhost) */
+let recog=null;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+async function askServer(text){
+  try{ const r=await fetch("/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+    const j=await r.json(); if(j.answer) speakText(j.answer);
+  }catch(_){}
+}
+const ptt=$("ptt");
+function startListen(){
+  if(!SR){ speakText("Voice questions need a secure connection."); return; }
+  if(!engOn){ engOn=true; $("engToggle").click(); }
+  recog=new SR(); recog.lang="en-US"; recog.interimResults=false; recog.maxAlternatives=1;
+  recog.onresult=ev=>{ const t=ev.results[0][0].transcript; askServer("engineer "+t); };
+  ptt.classList.add("live"); recog.onend=()=>ptt.classList.remove("live");
+  try{recog.start();}catch(_){}
+}
+function stopListen(){ if(recog){try{recog.stop();}catch(_){}}}
+ptt.addEventListener("pointerdown",e=>{e.preventDefault();startListen();});
+ptt.addEventListener("pointerup",e=>{e.preventDefault();stopListen();});
+
+loadSchemas(); connect();
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>

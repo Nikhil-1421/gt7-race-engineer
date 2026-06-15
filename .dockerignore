@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.zip
+.git/
+data/tracks.json
+gt7dashboard/test/
