@@ -1,0 +1,23 @@
+name: gt7_race_engineer
+description: Telemetry race engineer for Gran Turismo 7 — on-device capture, strategy, and radio callouts.
+publish_to: 'none'
+version: 0.2.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_tts: ^4.0.2
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/catalog.json

@@ -72,10 +72,12 @@ class ParamSpec:
 EVENT_SCHEMAS: dict[EventType, List[ParamSpec]] = {
     EventType.REFERENCE_LAP: [
         ParamSpec("track_name", "Track", "str", "", help="Name to store the reference under"),
+        ParamSpec("car", "Car", "str", ""),
         ParamSpec("from_replay", "Recording from replay", "bool", True),
     ],
     EventType.TEST_RUN: [
         ParamSpec("track_name", "Track", "str", ""),
+        ParamSpec("car", "Car", "str", ""),
         ParamSpec("tire_compound", "Tire", "enum", "RH", options=TIRES),
         ParamSpec("start_fuel", "Start fuel", "float", 65.0, unit="L"),
         ParamSpec("fuel_multiplier", "Fuel mult.", "enum", "3", options=["1", "2", "3", "4", "5", "6"]),
@@ -84,12 +86,14 @@ EVENT_SCHEMAS: dict[EventType, List[ParamSpec]] = {
     ],
     EventType.TIME_TRIAL: [
         ParamSpec("track_name", "Track", "str", ""),
+        ParamSpec("car", "Car", "str", ""),
         ParamSpec("tire_compound", "Tire", "enum", "RS", options=TIRES),
         ParamSpec("reference_track", "Reference lap (track)", "str", "",
                   help="Track name whose stored reference to delta against"),
     ],
     EventType.RACE: [
         ParamSpec("track_name", "Track", "str", ""),
+        ParamSpec("car", "Car", "str", ""),
         ParamSpec("race_minutes", "Race length", "int", 40, unit="min"),
         ParamSpec("mandatory_stops", "Mandatory stops", "int", 1),
         ParamSpec("required_tires", "Required tires", "multi_enum", ["RS", "RM", "RH"], options=TIRES,
@@ -101,6 +105,7 @@ EVENT_SCHEMAS: dict[EventType, List[ParamSpec]] = {
     ],
     EventType.BASELINE: [
         ParamSpec("track_name", "Track", "str", ""),
+        ParamSpec("car", "Car", "str", ""),
         ParamSpec("measure_pit_loss", "Calibrate pit loss", "bool", True,
                   help="Run a normal lap then a pit lap to measure time loss"),
     ],

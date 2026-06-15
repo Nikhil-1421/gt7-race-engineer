@@ -1,0 +1,208 @@
+{
+ "race": {
+  "script": [
+   {
+    "now": 0.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 0
+    }
+   },
+   {
+    "now": 10.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 3,
+     "fuel_laps_left": 14.0,
+     "fuel_balance_laps": 1.2
+    }
+   },
+   {
+    "now": 20.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 4,
+     "fuel_laps_left": 1.4,
+     "stops_left": 1,
+     "pit_by_lap": 4
+    }
+   },
+   {
+    "now": 40.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 5,
+     "stops_left": 0,
+     "fuel_balance_laps": -0.5,
+     "fuel_save_target_l": 2.9
+    }
+   },
+   {
+    "now": 90.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 6,
+     "stops_left": 0,
+     "fuel_balance_laps": -0.1
+    }
+   },
+   {
+    "now": 160.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 7,
+     "deg_per_lap_s": 0.21
+    }
+   },
+   {
+    "now": 220.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 8,
+     "tyre_temps": {
+      "fl": 99.0,
+      "fr": 113.5,
+      "rl": 96.0,
+      "rr": 108.0
+     }
+    }
+   },
+   {
+    "now": 240.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 9,
+     "fuel_laps_left": 8.0,
+     "fuel_balance_laps": 0.4
+    }
+   },
+   {
+    "now": 260.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "race",
+     "current_lap": 10,
+     "laps_left_race": 2
+    }
+   },
+   {
+    "now": 270.0,
+    "snap": {
+     "in_race": false,
+     "event_type": "race"
+    }
+   }
+  ],
+  "fired": [
+   {
+    "at": 0.0,
+    "category": "radio_check",
+    "text": "Radio check \u2014 engineer here, have a good one.",
+    "priority": 3
+   },
+   {
+    "at": 10.0,
+    "category": "fuel_update",
+    "text": "Fuel: 14.0 laps in the tank, up 1.2 on the race.",
+    "priority": 2
+   },
+   {
+    "at": 20.0,
+    "category": "box",
+    "text": "Box this lap, box, box.",
+    "priority": 0
+   },
+   {
+    "at": 40.0,
+    "category": "fuel_critical",
+    "text": "Fuel critical, we're 0.5 short \u2014 save now. target 2.9 a lap.",
+    "priority": 0
+   },
+   {
+    "at": 90.0,
+    "category": "fuel_save",
+    "text": "Fuel's marginal \u2014 lift and coast where you can.",
+    "priority": 1
+   },
+   {
+    "at": 160.0,
+    "category": "deg",
+    "text": "Tyres dropping off, 0.21 a lap \u2014 manage the rears.",
+    "priority": 1
+   },
+   {
+    "at": 220.0,
+    "category": "tyre",
+    "text": "FR running hot \u2014 ease the loading.",
+    "priority": 1
+   },
+   {
+    "at": 240.0,
+    "category": "fuel_update",
+    "text": "Fuel: 8.0 laps in the tank, up 0.4 on the race.",
+    "priority": 2
+   },
+   {
+    "at": 260.0,
+    "category": "laps_to_go",
+    "text": "Two laps to go \u2014 bring it home.",
+    "priority": 3
+   }
+  ]
+ },
+ "time_trial": {
+  "script": [
+   {
+    "now": 0.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "time_trial"
+    }
+   },
+   {
+    "now": 5.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "time_trial",
+     "delta_last_to_ref_s": -0.31
+    }
+   },
+   {
+    "now": 40.0,
+    "snap": {
+     "in_race": true,
+     "event_type": "time_trial",
+     "delta_last_to_ref_s": 0.42
+    }
+   }
+  ],
+  "fired": [
+   {
+    "at": 0.0,
+    "category": "radio_check",
+    "text": "Radio check \u2014 engineer here, have a good one.",
+    "priority": 3
+   },
+   {
+    "at": 5.0,
+    "category": "pace",
+    "text": "That's a 0.31 improvement \u2014 purple.",
+    "priority": 2
+   },
+   {
+    "at": 40.0,
+    "category": "pace",
+    "text": "Up 0.42 on the reference \u2014 find it in the slow stuff.",
+    "priority": 2
+   }
+  ]
+ }
+}

@@ -1,0 +1,363 @@
+{
+ "schemas": {
+  "reference_lap": [
+   {
+    "key": "track_name",
+    "label": "Track",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": "Name to store the reference under"
+   },
+   {
+    "key": "car",
+    "label": "Car",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "from_replay",
+    "label": "Recording from replay",
+    "kind": "bool",
+    "default": true,
+    "unit": "",
+    "options": null,
+    "help": ""
+   }
+  ],
+  "test_run": [
+   {
+    "key": "track_name",
+    "label": "Track",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "car",
+    "label": "Car",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "tire_compound",
+    "label": "Tire",
+    "kind": "enum",
+    "default": "RH",
+    "unit": "",
+    "options": [
+     "RS",
+     "RM",
+     "RH",
+     "IM",
+     "WET"
+    ],
+    "help": ""
+   },
+   {
+    "key": "start_fuel",
+    "label": "Start fuel",
+    "kind": "float",
+    "default": 65.0,
+    "unit": "L",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "fuel_multiplier",
+    "label": "Fuel mult.",
+    "kind": "enum",
+    "default": "3",
+    "unit": "",
+    "options": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6"
+    ],
+    "help": ""
+   },
+   {
+    "key": "tire_wear_multiplier",
+    "label": "Tire-wear mult.",
+    "kind": "enum",
+    "default": "3",
+    "unit": "",
+    "options": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6"
+    ],
+    "help": ""
+   },
+   {
+    "key": "target_stint_laps",
+    "label": "Target stint laps",
+    "kind": "int",
+    "default": 10,
+    "unit": "",
+    "options": null,
+    "help": ""
+   }
+  ],
+  "time_trial": [
+   {
+    "key": "track_name",
+    "label": "Track",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "car",
+    "label": "Car",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "tire_compound",
+    "label": "Tire",
+    "kind": "enum",
+    "default": "RS",
+    "unit": "",
+    "options": [
+     "RS",
+     "RM",
+     "RH",
+     "IM",
+     "WET"
+    ],
+    "help": ""
+   },
+   {
+    "key": "reference_track",
+    "label": "Reference lap (track)",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": "Track name whose stored reference to delta against"
+   }
+  ],
+  "race": [
+   {
+    "key": "track_name",
+    "label": "Track",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "car",
+    "label": "Car",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "race_minutes",
+    "label": "Race length",
+    "kind": "int",
+    "default": 40,
+    "unit": "min",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "mandatory_stops",
+    "label": "Mandatory stops",
+    "kind": "int",
+    "default": 1,
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "required_tires",
+    "label": "Required tires",
+    "kind": "multi_enum",
+    "default": [
+     "RS",
+     "RM",
+     "RH"
+    ],
+    "unit": "",
+    "options": [
+     "RS",
+     "RM",
+     "RH",
+     "IM",
+     "WET"
+    ],
+    "help": "Compounds that must be used; RH stint is mandatory in this series"
+   },
+   {
+    "key": "refuel_rate_lps",
+    "label": "Refuel rate",
+    "kind": "float",
+    "default": 9.0,
+    "unit": "L/s",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "pit_lane_loss_s",
+    "label": "Pit-lane loss",
+    "kind": "float",
+    "default": 22.0,
+    "unit": "s",
+    "options": null,
+    "help": "Auto-filled from track baseline when available"
+   },
+   {
+    "key": "fuel_buffer_laps",
+    "label": "Fuel buffer",
+    "kind": "float",
+    "default": 0.6,
+    "unit": "laps",
+    "options": null,
+    "help": ""
+   }
+  ],
+  "baseline": [
+   {
+    "key": "track_name",
+    "label": "Track",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "car",
+    "label": "Car",
+    "kind": "str",
+    "default": "",
+    "unit": "",
+    "options": null,
+    "help": ""
+   },
+   {
+    "key": "measure_pit_loss",
+    "label": "Calibrate pit loss",
+    "kind": "bool",
+    "default": true,
+    "unit": "",
+    "options": null,
+    "help": "Run a normal lap then a pit lap to measure time loss"
+   }
+  ]
+ },
+ "fmt_ms": [
+  {
+   "ms": null,
+   "out": "--:--.---"
+  },
+  {
+   "ms": -1,
+   "out": "--:--.---"
+  },
+  {
+   "ms": 0,
+   "out": "0:00.000"
+  },
+  {
+   "ms": 999,
+   "out": "0:00.999"
+  },
+  {
+   "ms": 1000,
+   "out": "0:01.000"
+  },
+  {
+   "ms": 59999,
+   "out": "0:59.999"
+  },
+  {
+   "ms": 60000,
+   "out": "1:00.000"
+  },
+  {
+   "ms": 65432,
+   "out": "1:05.432"
+  },
+  {
+   "ms": 95234,
+   "out": "1:35.234"
+  },
+  {
+   "ms": 600000,
+   "out": "10:00.000"
+  },
+  {
+   "ms": 3599999,
+   "out": "59:59.999"
+  },
+  {
+   "ms": 5025678,
+   "out": "83:45.678"
+  }
+ ],
+ "fmt_clock": [
+  {
+   "s": -5.0,
+   "out": "0:00"
+  },
+  {
+   "s": 0.0,
+   "out": "0:00"
+  },
+  {
+   "s": 0.4,
+   "out": "0:00"
+  },
+  {
+   "s": 59.9,
+   "out": "0:59"
+  },
+  {
+   "s": 60.0,
+   "out": "1:00"
+  },
+  {
+   "s": 61.0,
+   "out": "1:01"
+  },
+  {
+   "s": 599.0,
+   "out": "9:59"
+  },
+  {
+   "s": 1432.7,
+   "out": "23:52"
+  },
+  {
+   "s": 2400.0,
+   "out": "40:00"
+  }
+ ]
+}

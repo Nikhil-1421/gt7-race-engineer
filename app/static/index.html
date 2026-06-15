@@ -199,11 +199,13 @@
 <script>
 const $ = id => document.getElementById(id);
 let SCHEMAS = {}, curType = "race", curValues = {};
+let CATALOG = {tracks:[], cars:[]};
 
 function tyColor(t){ if(t<70)return"var(--blue)"; if(t<=104)return"var(--accent)"; if(t<=112)return"var(--warn)"; return"var(--danger)"; }
 
 async function loadSchemas(){
   SCHEMAS = await (await fetch("/schemas")).json();
+  try{ CATALOG = await (await fetch("/catalog")).json(); }catch(_){ CATALOG = {tracks:[],cars:[]}; }
   const sess = await (await fetch("/session")).json();
   curType = sess.type; curValues = {...sess.values};
   renderTypes(); renderFields();
@@ -218,12 +220,59 @@ function renderTypes(){
     $("types").appendChild(b);
   });
 }
+/* cascading selectors for track (venue->layout) and car (category->country->car),
+   driven by /catalog. Falls back to a free-text input when the catalog is empty. */
+function fillSelect(sel,opts,cur,placeholder){
+  sel.innerHTML="";
+  const ph=document.createElement("option"); ph.value=""; ph.textContent=placeholder; sel.appendChild(ph);
+  opts.forEach(o=>{ const op=document.createElement("option"); op.value=o; op.textContent=o; if(o===cur)op.selected=true; sel.appendChild(op); });
+  if(cur && !opts.includes(cur)){ const op=document.createElement("option"); op.value=cur; op.textContent=cur+" (custom)"; op.selected=true; sel.appendChild(op); }
+}
+function plainInput(f,s){
+  const inp=document.createElement("input"); inp.type="text"; inp.value=curValues[s.key]||"";
+  inp.oninput=()=>curValues[s.key]=inp.value; f.appendChild(inp);
+}
+function buildTrackCascade(f,s){
+  const venues=CATALOG.tracks||[];
+  if(!venues.length){ plainInput(f,s); return; }
+  const cur=curValues[s.key]||"";
+  const curVenue=venues.find(v=>(v.layouts||[]).includes(cur));
+  const vSel=document.createElement("select");
+  const lSel=document.createElement("select"); lSel.style.marginTop="6px";
+  fillSelect(vSel, venues.map(v=>v.venue), curVenue?curVenue.venue:"", "Select track…");
+  const loadLayouts=(venueName,selected)=>{ const v=venues.find(x=>x.venue===venueName); fillSelect(lSel, v?(v.layouts||[]):[], selected||"", "Select layout…"); };
+  loadLayouts(curVenue?curVenue.venue:"", cur);
+  vSel.onchange=()=>{ loadLayouts(vSel.value,""); curValues[s.key]=""; };
+  lSel.onchange=()=>{ curValues[s.key]=lSel.value; };
+  f.appendChild(vSel); f.appendChild(lSel);
+}
+function buildCarCascade(f,s){
+  const cats=CATALOG.cars||[];
+  if(!cats.length){ plainInput(f,s); return; }
+  const cur=curValues[s.key]||"";
+  let curCat=null,curCountry=null;
+  cats.forEach(c=>(c.manufacturers||[]).forEach(m=>{ if((m.cars||[]).includes(cur)){curCat=c;curCountry=m.country;} }));
+  const cSel=document.createElement("select");
+  const coSel=document.createElement("select"); coSel.style.marginTop="6px";
+  const carSel=document.createElement("select"); carSel.style.marginTop="6px";
+  fillSelect(cSel, cats.map(c=>c.category), curCat?curCat.category:"", "Category…");
+  const loadCountries=(catName,sel)=>{ const c=cats.find(x=>x.category===catName); fillSelect(coSel, c?(c.manufacturers||[]).map(m=>m.country):[], sel||"", "Manufacturer country…"); };
+  const loadCars=(catName,country,sel)=>{ const c=cats.find(x=>x.category===catName); const m=c?(c.manufacturers||[]).find(y=>y.country===country):null; fillSelect(carSel, m?(m.cars||[]):[], sel||"", "Car…"); };
+  loadCountries(curCat?curCat.category:"", curCountry);
+  loadCars(curCat?curCat.category:"", curCountry, cur);
+  cSel.onchange=()=>{ loadCountries(cSel.value,""); loadCars(cSel.value,"",""); curValues[s.key]=""; };
+  coSel.onchange=()=>{ loadCars(cSel.value,coSel.value,""); curValues[s.key]=""; };
+  carSel.onchange=()=>{ curValues[s.key]=carSel.value; };
+  f.appendChild(cSel); f.appendChild(coSel); f.appendChild(carSel);
+}
 function renderFields(){
   const specs = SCHEMAS[curType]||[]; const box=$("fields"); box.innerHTML="";
   specs.forEach(s=>{
     if(!(s.key in curValues)) curValues[s.key]=s.default;
     const f=document.createElement("div"); f.className="field";
     const lab=document.createElement("label"); lab.textContent=s.label+(s.unit?` (${s.unit})`:""); f.appendChild(lab);
+    if(s.key==="track_name"){ buildTrackCascade(f,s); if(s.help){const h=document.createElement("div");h.className="hint";h.textContent=s.help;f.appendChild(h);} box.appendChild(f); return; }
+    if(s.key==="car"){ buildCarCascade(f,s); box.appendChild(f); return; }
     if(s.kind==="multi_enum"){
       const wrap=document.createElement("div"); wrap.className="chips";
       s.options.forEach(o=>{

@@ -15,7 +15,25 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-DEFAULT_STORE = Path(__file__).parent.parent / "data" / "tracks.json"
+def _default_store() -> Path:
+    """Persist where the packaged app can actually write AND where data
+    survives a restart: the same per-user config dir config.py uses, NOT a
+    path next to the code (read-only / temporary inside a PyInstaller bundle —
+    which is why saved references vanished when the desktop app was closed)."""
+    try:
+        from app.config import config_dir
+        return config_dir() / "tracks.json"
+    except Exception:
+        return Path(__file__).parent.parent / "data" / "tracks.json"
+
+
+DEFAULT_STORE = _default_store()
+
+
+def _key(name: str) -> str:
+    """Canonical match key: case- and whitespace-insensitive, so 'Red Bull
+    Ring', 'red bull ring', and ' Red  Bull  Ring ' resolve to one reference."""
+    return " ".join((name or "").split()).casefold()
 
 
 @dataclass
@@ -50,7 +68,11 @@ class TrackStore:
     def load(self) -> None:
         if self.path.exists():
             raw = json.loads(self.path.read_text())
-            self._tracks = {k: TrackBaseline.from_dict(v) for k, v in raw.items()}
+            # re-key by canonical name so legacy/raw keys normalize on load
+            self._tracks = {}
+            for v in raw.values():
+                bl = TrackBaseline.from_dict(v)
+                self._tracks[_key(bl.name)] = bl
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,14 +80,14 @@ class TrackStore:
             {k: v.to_dict() for k, v in self._tracks.items()}, indent=2))
 
     def get(self, name: str) -> Optional[TrackBaseline]:
-        return self._tracks.get(name)
+        return self._tracks.get(_key(name))
 
     def put(self, baseline: TrackBaseline) -> None:
-        self._tracks[baseline.name] = baseline
+        self._tracks[_key(baseline.name)] = baseline
         self.save()
 
     def names(self) -> List[str]:
-        return sorted(self._tracks)
+        return sorted((bl.name for bl in self._tracks.values()), key=str.casefold)
 
 
 def _cumulative_distance(xs: List[float], zs: List[float]) -> List[float]:

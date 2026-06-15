@@ -212,6 +212,13 @@ async def schemas():
     return JSONResponse(schemas_payload())
 
 
+@app.get("/catalog")
+async def catalog():
+    """Track + car catalog for the cascading session selectors."""
+    from app.catalog import load_catalog
+    return JSONResponse(load_catalog())
+
+
 @app.get("/session")
 async def get_session():
     return JSONResponse(state.event.to_dict())
@@ -231,6 +238,63 @@ async def tracks():
          "pit_loss_s": b.pit_loss_s, "best_lap_ms": b.best_lap_ms}
         for n in state.tracks.names()
     ])
+
+
+@app.get("/references")
+async def references():
+    """Saved reference laps — powers the Load dropdown and time-trial picker."""
+    from app.model import fmt_ms
+    out = []
+    for name in state.tracks.names():
+        bl = state.tracks.get(name)
+        if not bl:
+            continue
+        out.append({
+            "name": bl.name,
+            "best_lap_ms": bl.best_lap_ms,
+            "best_lap_str": fmt_ms(bl.best_lap_ms) if bl.best_lap_ms and bl.best_lap_ms > 0 else None,
+            "length_m": bl.length_m,
+            "pit_loss_s": bl.pit_loss_s,
+            "has_line": bool(bl.reference_line),
+        })
+    return JSONResponse({"references": out})
+
+
+@app.post("/reference/save_last")
+async def save_reference_last(req: Request):
+    """Explicitly save the last completed lap as a track's reference. Works in
+    any mode, with no faster-only gate. Body: {track_name?} (defaults to the
+    current session's track)."""
+    raw = await req.body()
+    body = {}
+    if raw:
+        try:
+            body = json.loads(raw)
+        except Exception:
+            body = {}
+    name = (body.get("track_name") or state.event.get("track_name", "") or "").strip()
+    if not name:
+        return JSONResponse({"ok": False, "error": "no track selected"}, status_code=400)
+    traces = getattr(state.provider, "lap_traces", [])
+    if not traces:
+        return JSONResponse({"ok": False, "error": "no completed laps yet"}, status_code=400)
+    tr = traces[-1]
+    rec = BaselineRecorder(name)
+    for x, z, s in zip(tr.x, tr.z, tr.speed):
+        rec.add_sample(x, z, s)
+    lap_ms = state.provider.laps[-1].lap_finish_time_ms if state.provider.laps else 0
+    try:
+        bl = rec.finalize(lap_ms=lap_ms)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    existing = state.tracks.get(name)
+    if existing and existing.pit_loss_s is not None:
+        bl.pit_loss_s = existing.pit_loss_s
+    state.tracks.put(bl)
+    from app.model import fmt_ms
+    return JSONResponse({"ok": True, "name": bl.name, "best_lap_ms": bl.best_lap_ms,
+                         "best_lap_str": fmt_ms(bl.best_lap_ms) if bl.best_lap_ms > 0 else None,
+                         "length_m": bl.length_m, "stored_at": str(state.tracks.path)})
 
 
 @app.post("/analyze")
